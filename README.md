@@ -1,0 +1,2 @@
+# rmdup
+Remove duplicate files
