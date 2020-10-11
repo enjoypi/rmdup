@@ -6,18 +6,40 @@ import argparse
 import logging
 import os
 from fileinfo import FileInfo
-from pathlib import Path
+from pathlib import Path, PurePath
 
 
-def tidy(directory, collection):
-    for root, _, files in os.walk(directory):
-        path = Path(root)
-        for filename in files:
-            fi = FileInfo(path, filename)
-            if isinstance(fi, FileInfo):
-                collection.setdefault(fi, []).append(str(fi))
+def gen_bat_cmd(filename: str):
+    source = PurePath(filename)
+    parts = list(source.parts)
+    parts.insert(1, 'tmp')
+    target = PurePath(*parts)
+    return 'ROBOCOPY /MOV "{}" "{}" "{}"\n'.format(str(source.parent),
+                                                   str(target.parent),
+                                                   source.name)
+
+
+def generate_bat(collection: [str], script_name: str, gen_cmd):
+    bat = open(script_name, mode='wt', encoding='gbk')
+
+    for names in collection:
+        if len(names) <= 1:
+            continue
+
+        for filename in names:
+            bat.write(gen_cmd(filename))
+        bat.write('\n')
+
+
+def tidy(directory: str, collection: dict):
+    for dirpath, _, filenames in os.walk(directory):
+        path = Path(dirpath)
+        for filename in filenames:
+            f = FileInfo(path, filename)
+            if isinstance(f, FileInfo):
+                collection.setdefault(f, []).append(str(f))
             else:
-                logging.debug(fi)
+                logging.debug(f)
 
 
 def main():
@@ -41,9 +63,8 @@ def main():
     for directory in args.directories:
         tidy(directory, files)
 
-    # for value in files.values():
-    #     if len(value) > 1:
-    #         print(value)
+    if os.name == 'nt':
+        generate_bat(files.values(), 'rmdup.bat', gen_bat_cmd)
 
 
 if __name__ == '__main__':
