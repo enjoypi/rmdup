@@ -18,24 +18,24 @@ class FileInfo(object):
         """
         docstring
         """
-        fullpath = path.joinpath(filename).resolve()
-        if not fullpath.is_file():
+        filepath = path.joinpath(filename).resolve()
+        if not filepath.is_file():
             return None
 
-        stat = fullpath.stat()
+        stat = filepath.stat()
         if stat.st_size <= 0:
-            return UserWarning('Empty file: ' + str(fullpath))
+            return UserWarning('Empty file: ' + str(filepath))
 
         checksum = None
         try:
-            with fullpath.open(mode='rb') as f:
+            with filepath.open(mode='rb') as f:
                 checksum = adler32(f.read(8192))
         except OSError as e:
             return e
 
         instance = super().__new__(cls)
         instance._hash = checksum
-        instance.path = fullpath
+        instance.path = filepath
         instance.stat = stat
         return instance
 
