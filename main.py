@@ -8,7 +8,9 @@ import logging
 import os
 from collections import OrderedDict
 from fileinfo import FileInfo
-from pathlib import Path, PurePath
+from pathlib import PurePath
+
+from wildcard import Wildcard
 
 
 def gen_bat_cmd(filename: str):
@@ -38,10 +40,21 @@ def generate_script(collection, script, gen_cmd):
 
 
 def tidy(directory: str, collection: dict):
+    ignoring_file = '.rmdupignore'
+    wildcard = Wildcard(directory, ignoring_file)
     for dirpath, _, filenames in os.walk(directory):
-        path = Path(dirpath)
+        path = PurePath(dirpath)
         for filename in filenames:
-            f = FileInfo(path, filename)
+            if filename == ignoring_file or filename == 'Icon\r':
+                continue
+
+            filepath = str(path.joinpath(filename))
+
+            # ignore
+            if wildcard.match(filepath):
+                continue
+
+            f = FileInfo(filepath)
             if isinstance(f, FileInfo):
                 logging.debug(f.uri)
                 collection.setdefault(f, []).append(str(f))
@@ -52,14 +65,14 @@ def tidy(directory: str, collection: dict):
 def main():
     parser = argparse.ArgumentParser(description='remove duplicate files',
                                      prog='rmdup')
-    # parser.add_argument('-loglevel', default='INFO', help='logging level')
+    # parser.add_argument('-log.level', default='INFO', help='logging level')
     parser.add_argument('directories',
                         metavar='directory',
                         type=str,
                         nargs='+',
                         help='the directory to find duplicate')
 
-    # level = parser.parse_args('-loglevel')
+    # level = parser.parse_args('-log.level')
     logging.basicConfig(level='INFO')
 
     args = parser.parse_args()

@@ -9,7 +9,7 @@ class IgnoringTestCase(unittest.TestCase):
     # Only use setUp() and tearDown() if necessary
 
     def setUp(self):
-        read_data='''
+        read_data = '''
 .git/
 */.git/
 *.jpg
@@ -19,7 +19,7 @@ a/*/c/
 
 '''
         with patch('io.open', mock_open(read_data=read_data)):
-            self.wildcard = Wildcard('.')
+            self.wildcard = Wildcard('.', '.rmdupignore')
 
     def tearDown(self):
         pass
