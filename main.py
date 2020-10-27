@@ -41,8 +41,13 @@ def generate_script(collection, script, gen_cmd):
 
 def tidy(directory: str, collection: dict):
     ignoring_file = '.rmdupignore'
-    wildcard = Wildcard(directory, ignoring_file)
+    top_wc = Wildcard(directory, ignoring_file)
     for dirpath, _, filenames in os.walk(directory):
+        if top_wc.match(dirpath):
+            continue
+
+        sub_wc = Wildcard(dirpath, ignoring_file)
+
         path = PurePath(dirpath)
         for filename in filenames:
             if filename == ignoring_file or filename == 'Icon\r':
@@ -51,7 +56,9 @@ def tidy(directory: str, collection: dict):
             filepath = str(path.joinpath(filename))
 
             # ignore
-            if wildcard.match(filepath):
+            if sub_wc.match(filepath):
+                continue
+            if top_wc.match(filepath):
                 continue
 
             f = FileInfo(filepath)

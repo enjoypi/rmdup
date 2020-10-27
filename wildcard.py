@@ -30,6 +30,7 @@ def parse_file(dirpath: str, file: str) -> List[str]:
             if len(wild_str) <= 0:
                 continue
             if wild_str[-1] == '/':
+                ret.append(path.joinpath(wild_str))
                 ret.append(path.joinpath(wild_str, '*'))
             else:
                 ret.append(path.joinpath(wild_str))
