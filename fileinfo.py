@@ -31,18 +31,12 @@ class FileInfo(object):
             return e
 
         instance = super().__new__(cls)
+        instance._digest = None
         instance._hash = checksum
         instance._path = filepath
         instance._stat = stat
+        instance._uri = str(filepath)
         return instance
-
-    def __init__(self, _path: str):
-        """
-        docstring
-        """
-        self._digest = None
-        self._uri = str(self._path)
-        pass
 
     def __eq__(self, other):
         return self._stat.st_size == other._stat.st_size \
