@@ -25,7 +25,7 @@ a/*/c/
         pass
 
     def test_contain(self):
-        assert self.wildcard.match('.git/')
+        assert self.wildcard.match('.git')
         assert self.wildcard.match('.git/a/b/c')
         assert self.wildcard.match('/a/b/c/.git/')
         assert self.wildcard.match('/a/b/c/.git/d/e/f')
