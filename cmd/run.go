@@ -29,16 +29,19 @@ func run(cmd *cobra.Command, args []string) error {
 	for i := len(keys) - 1; i >= 0; i-- {
 		hashes := files[int64(keys[i])]
 		first := hashes[0]
-		rmfirst := false
+		same := false
 		for j := 1; j < len(hashes); j++ {
 			other := hashes[j]
 			if first.Same(hashes[j]) {
-				if !rmfirst {
-					logger.Info(fmt.Sprintf("#rm %s", first.absPath))
-					rmfirst = true
+				if !same {
+					fmt.Printf("#rm %s\n", first.absPath)
+					same = true
 				}
-				logger.Info(fmt.Sprintf("#rm %s", other.absPath))
+				fmt.Printf("#rm %s\n", other.absPath)
 			}
+		}
+		if same {
+			fmt.Println()
 		}
 	}
 

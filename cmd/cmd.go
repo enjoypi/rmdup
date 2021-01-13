@@ -50,7 +50,7 @@ func init() {
 	// will be global for your application.
 	rootCmd.PersistentFlags().BoolP("verbose", "V", false, "verbose")
 
-	rootCmd.PersistentFlags().StringVar(&logLevel, "log.level", "debug", "level of logger")
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log.level", "info", "level of logger")
 }
 
 func preRunE(cmd *cobra.Command, args []string) (err error) {
