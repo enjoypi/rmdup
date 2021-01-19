@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"sort"
 
-	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+
+	"github.com/enjoypi/gojob"
+	"github.com/spf13/cobra"
 )
 
 var files = make(map[int64][]*fileHash)
@@ -14,7 +17,7 @@ var files = make(map[int64][]*fileHash)
 func run(cmd *cobra.Command, args []string) error {
 	for _, arg := range args {
 		if err := filepath.Walk(arg, walk); err != nil {
-			logger.Error("invalid directory", zap.Error(err), zap.String("directory", arg))
+			return err
 		}
 	}
 
@@ -24,26 +27,36 @@ func run(cmd *cobra.Command, args []string) error {
 			keys = append(keys, int(k))
 		}
 	}
-
 	sort.Ints(keys)
+
+	m := gojob.NewManager(16)
 	for i := len(keys) - 1; i >= 0; i-- {
-		hashes := files[int64(keys[i])]
-		first := hashes[0]
-		same := false
-		for j := 1; j < len(hashes); j++ {
-			other := hashes[j]
-			if first.Same(hashes[j]) {
-				if !same {
-					fmt.Printf("#rm %s\n", first.absPath)
-					same = true
+		values := context.WithValue(m.Context, "size", int64(keys[i]))
+		m.Go(func(ctx context.Context, id gojob.TaskID) error {
+			size := ctx.Value("size").(int64)
+			logger.Debug("started", zap.Int32("taskID", id), zap.Int64("size", size))
+
+			hashes := files[size]
+			first := hashes[0]
+			same := false
+			for j := 1; j < len(hashes); j++ {
+				other := hashes[j]
+				if first.Same(hashes[j]) {
+					if !same {
+						fmt.Printf("#rm %s\n", first.absPath)
+						same = true
+					}
+					fmt.Printf("#rm %s\n", other.absPath)
 				}
-				fmt.Printf("#rm %s\n", other.absPath)
 			}
-		}
-		if same {
-			fmt.Println()
-		}
+			if same {
+				fmt.Println()
+			}
+			return nil
+		}, values, nil)
 	}
+
+	m.Wait()
 
 	return nil
 }
