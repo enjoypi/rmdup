@@ -29,7 +29,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	sort.Ints(keys)
 
-	m := gojob.NewManager(16)
+	m := gojob.NewManager(8)
 	for i := len(keys) - 1; i >= 0; i-- {
 		values := context.WithValue(m.Context, "size", int64(keys[i]))
 		m.Go(func(ctx context.Context, id gojob.TaskID) error {
@@ -37,6 +37,8 @@ func run(cmd *cobra.Command, args []string) error {
 			logger.Debug("started", zap.Int32("taskID", id), zap.Int64("size", size))
 
 			hashes := files[size]
+			//logDupFiles(hashes)
+
 			first := hashes[0]
 			same := false
 			for j := 1; j < len(hashes); j++ {
@@ -59,4 +61,12 @@ func run(cmd *cobra.Command, args []string) error {
 	m.Wait()
 
 	return nil
+}
+
+func logDupFiles(hashes []*fileHash) {
+	fmt.Print("#")
+	for _, v := range hashes {
+		fmt.Print(v.absPath, " ")
+	}
+	fmt.Println()
 }
