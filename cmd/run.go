@@ -75,6 +75,8 @@ func run(cmd *cobra.Command, args []string) error {
 
 			if len(same) > 0 {
 				logRM(same, &cfg)
+			} else {
+				logDupFiles(hashes)
 			}
 			return nil
 		}, values, nil)
@@ -86,9 +88,8 @@ func run(cmd *cobra.Command, args []string) error {
 }
 
 func logDupFiles(hashes []*fileHash) {
-	fmt.Print("#")
 	for _, v := range hashes {
-		fmt.Print(v.absPath, " ")
+		fmt.Printf("#rm \"%s\"\n", v.absPath)
 	}
 	fmt.Println()
 }
