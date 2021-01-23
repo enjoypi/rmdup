@@ -3,19 +3,25 @@ package cmd
 import (
 	"crypto/sha256"
 	"hash/adler32"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"os"
 
+	"github.com/corona10/goimagehash"
 	"go.uber.org/zap"
 )
 
 const sizeForAdler32 = 4096
 
 type fileHash struct {
-	absPath string
-	info    os.FileInfo
-	adler32 uint32 // to compare fast
-	sha256  []byte
+	absPath   string
+	info      os.FileInfo
+	adler32   uint32 // to compare fast
+	sha256    []byte
+	imageHash *goimagehash.ImageHash
 }
 
 func (f *fileHash) SumAdler32() {
@@ -63,19 +69,32 @@ func (f *fileHash) SumSHA256() {
 	f.sha256 = h.Sum(nil)
 }
 
-func (f *fileHash) PHash() {
-	//file1, _ := os.Open("sample1.jpg")
-	//file2, _ := os.Open("sample2.jpg")
-	//defer file1.Close()
-	//defer file2.Close()
-	//
-	//img1, _ := jpeg.Decode(file1)
-	//img2, _ := jpeg.Decode(file2)
-	//hash1, _ := goimagehash.AverageHash(img1)
-	//hash2, _ := goimagehash.AverageHash(img2)
-	//distance, _ := hash1.Distance(hash2)
-	//fmt.Printf("Distance between images: %v\n", distance)
-	//
+func (f *fileHash) PHash() error {
+	if f.imageHash != nil {
+		return nil
+	}
+
+	file, err := os.Open(f.absPath)
+	if err != nil {
+		logger.Error("open file", zap.Error(err))
+		return err
+	}
+	defer file.Close()
+
+	img, _, err := image.Decode(file)
+	if err != nil {
+		logger.Error("image.Decode", zap.String("file", f.absPath), zap.Error(err))
+		return err
+	}
+
+	hash, err := goimagehash.AverageHash(img)
+	if err != nil {
+		logger.Error("goimagehash.AverageHash", zap.Error(err))
+		return err
+	}
+
+	f.imageHash = hash
+
 	//hash1, _ = goimagehash.DifferenceHash(img1)
 	//hash2, _ = goimagehash.DifferenceHash(img2)
 	//distance, _ = hash1.Distance(hash2)
@@ -87,13 +106,14 @@ func (f *fileHash) PHash() {
 	//fmt.Printf("Distance between images: %v\n", distance)
 	//fmt.Printf("hash3 bit size: %v\n", hash3.Bits())
 	//fmt.Printf("hash4 bit size: %v\n", hash4.Bits())
-	//
+
 	//var b bytes.Buffer
 	//foo := bufio.NewWriter(&b)
 	//_ = hash4.Dump(foo)
 	//foo.Flush()
 	//bar := bufio.NewReader(&b)
 	//hash5, _ := goimagehash.LoadExtImageHash(bar)
+	return nil
 }
 
 func (f *fileHash) Same(other *fileHash) bool {
@@ -108,6 +128,14 @@ func (f *fileHash) Same(other *fileHash) bool {
 		return false
 	}
 
+	if f.PHash() == nil && other.PHash() == nil {
+		if dis, err := f.imageHash.Distance(other.imageHash); err == nil {
+			if dis != 0 {
+				logger.Debug("different image", zap.String("file1", f.absPath), zap.String("file2", f.absPath), zap.Int("distance", dis))
+			}
+			return dis == 0
+		}
+	}
 	f.SumSHA256()
 	other.SumSHA256()
 	if len(f.sha256) != len(other.sha256) {

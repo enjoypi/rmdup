@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -76,7 +77,7 @@ func run(cmd *cobra.Command, args []string) error {
 			if len(same) > 0 {
 				logRM(same, &cfg)
 			} else {
-				logDupFiles(hashes)
+				//logDupFiles(hashes)
 			}
 			return nil
 		}, values, nil)
@@ -95,6 +96,12 @@ func logDupFiles(hashes []*fileHash) {
 }
 
 func match(fullpath string, path2match map[string]bool) bool {
+
+	base := path.Base(fullpath)
+	if strings.Count(base, "(2)") > 0 {
+		return true
+	}
+
 	dirs := strings.Split(fullpath, "/")
 	for _, dir := range dirs[:len(dirs)-1] {
 		if len(dir) <= 0 {
