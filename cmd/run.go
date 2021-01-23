@@ -15,6 +15,7 @@ import (
 	"github.com/enjoypi/gojob"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+	"gopkg.in/gographics/imagick.v3/imagick"
 	"gopkg.in/yaml.v2"
 )
 
@@ -28,6 +29,9 @@ type config struct {
 }
 
 func run(cmd *cobra.Command, args []string) error {
+	imagick.Initialize()
+	defer imagick.Terminate()
+
 	var cfg config
 
 	f, err := os.Open("rmdup.yaml")
@@ -52,9 +56,11 @@ func run(cmd *cobra.Command, args []string) error {
 		}
 	}
 	sort.Ints(keys)
+	//reverse(keys)
+	//sort.Sort(sort.Reverse(sort.IntSlice(keys)))
 
 	m := gojob.NewManager(int64(runtime.GOMAXPROCS(0)))
-	for i := len(keys) - 1; i >= 0; i-- {
+	for i := 0; i < len(keys); i++ {
 		values := context.WithValue(m.Context, "size", int64(keys[i]))
 		m.Go(func(ctx context.Context, id gojob.TaskID) error {
 			size := ctx.Value("size").(int64)

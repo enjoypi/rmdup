@@ -12,6 +12,7 @@ import (
 
 	"github.com/corona10/goimagehash"
 	"go.uber.org/zap"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 const sizeForAdler32 = 4096
@@ -22,6 +23,7 @@ type fileHash struct {
 	adler32   uint32 // to compare fast
 	sha256    []byte
 	imageHash *goimagehash.ImageHash
+	mw        *imagick.MagickWand
 }
 
 func (f *fileHash) SumAdler32() {
@@ -67,6 +69,19 @@ func (f *fileHash) SumSHA256() {
 	}
 
 	f.sha256 = h.Sum(nil)
+}
+
+func (f *fileHash) MagickWand() {
+	if f.mw != nil {
+		return
+	}
+
+	mw := imagick.NewMagickWand()
+	if err := mw.ReadImage(f.absPath); err != nil {
+		logger.Debug(err.Error())
+		return
+	}
+	f.mw = mw
 }
 
 func (f *fileHash) PHash() error {
@@ -144,6 +159,14 @@ func (f *fileHash) Same(other *fileHash) bool {
 }
 
 func (f *fileHash) SameImage(other *fileHash) bool {
+	//f.MagickWand()
+	//other.MagickWand()
+	//
+	//if f.mw != nil && other.mw != nil {
+	//	_, distortion := f.mw.CompareImages(other.mw, imagick.METRIC_PERCEPTUAL_HASH_ERROR)
+	//	logger.Info("different image", zap.String("file1", f.absPath), zap.String("file2", other.absPath), zap.Float64("distortion", distortion))
+	//}
+
 	if f.PHash() == nil && other.PHash() == nil {
 		if dis, err := f.imageHash.Distance(other.imageHash); err == nil {
 			//if dis != 0 {
