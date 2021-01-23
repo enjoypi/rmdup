@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -46,16 +47,13 @@ func run(cmd *cobra.Command, args []string) error {
 
 	keys := make([]int, 0)
 	for k, hashes := range files {
-		//if k > 10000000 {
-		//	continue
-		//}
 		if len(hashes) > 1 {
 			keys = append(keys, int(k))
 		}
 	}
 	sort.Ints(keys)
 
-	m := gojob.NewManager(4)
+	m := gojob.NewManager(int64(runtime.GOMAXPROCS(0)))
 	for i := len(keys) - 1; i >= 0; i-- {
 		values := context.WithValue(m.Context, "size", int64(keys[i]))
 		m.Go(func(ctx context.Context, id gojob.TaskID) error {
