@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -45,13 +46,16 @@ func run(cmd *cobra.Command, args []string) error {
 
 	keys := make([]int, 0)
 	for k, hashes := range files {
+		//if k > 10000000 {
+		//	continue
+		//}
 		if len(hashes) > 1 {
 			keys = append(keys, int(k))
 		}
 	}
 	sort.Ints(keys)
 
-	m := gojob.NewManager(1)
+	m := gojob.NewManager(4)
 	for i := len(keys) - 1; i >= 0; i-- {
 		values := context.WithValue(m.Context, "size", int64(keys[i]))
 		m.Go(func(ctx context.Context, id gojob.TaskID) error {
@@ -77,7 +81,7 @@ func run(cmd *cobra.Command, args []string) error {
 			if len(same) > 0 {
 				logRM(same, &cfg)
 			} else {
-				//logDupFiles(hashes)
+				logDupFiles(hashes)
 			}
 			return nil
 		}, values, nil)
@@ -89,16 +93,21 @@ func run(cmd *cobra.Command, args []string) error {
 }
 
 func logDupFiles(hashes []*fileHash) {
+	buf := bytes.NewBufferString("")
 	for _, v := range hashes {
-		fmt.Printf("#rm \"%s\"\n", v.absPath)
+		buf.WriteString("#rm \"")
+		buf.WriteString(v.absPath)
+		buf.WriteString("\"\n")
 	}
-	fmt.Println()
+	fmt.Println(buf.String())
 }
 
 func match(fullpath string, path2match map[string]bool) bool {
 
 	base := path.Base(fullpath)
-	if strings.Count(base, "(2)") > 0 {
+	ext := path.Ext(fullpath)
+	noExt := strings.TrimSuffix(base, ext)
+	if strings.HasSuffix(noExt, "(2)") || strings.HasSuffix(noExt, "_1") || strings.HasSuffix(noExt, "_1_2") {
 		return true
 	}
 
@@ -138,12 +147,15 @@ func logRM(files []string, cfg *config) {
 			break
 		}
 	}
+	buf := bytes.NewBufferString("")
 	for i := 0; i < len(files); i++ {
 		if i != rm {
-			fmt.Print("#")
+			buf.WriteString("#")
 		}
-		fmt.Printf("rm \"%s\"\n", files[i])
+		buf.WriteString("rm \"")
+		buf.WriteString(files[i])
+		buf.WriteString("\"\n")
 	}
 
-	fmt.Println()
+	fmt.Println(buf.String())
 }

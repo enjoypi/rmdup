@@ -83,13 +83,13 @@ func (f *fileHash) PHash() error {
 
 	img, _, err := image.Decode(file)
 	if err != nil {
-		logger.Error("image.Decode", zap.String("file", f.absPath), zap.Error(err))
+		logger.Debug("image.Decode", zap.String("file", f.absPath), zap.Error(err))
 		return err
 	}
 
-	hash, err := goimagehash.AverageHash(img)
+	hash, err := goimagehash.PerceptionHash(img)
 	if err != nil {
-		logger.Error("goimagehash.AverageHash", zap.Error(err))
+		logger.Debug("goimagehash.PerceptionHash", zap.String("file", f.absPath), zap.Error(err))
 		return err
 	}
 
@@ -117,6 +117,7 @@ func (f *fileHash) PHash() error {
 }
 
 func (f *fileHash) Same(other *fileHash) bool {
+
 	if f.info.Size() != other.info.Size() {
 		return false
 	}
@@ -125,27 +126,31 @@ func (f *fileHash) Same(other *fileHash) bool {
 	other.SumAdler32()
 
 	if f.adler32 != other.adler32 {
-		return false
+		return f.SameImage(other)
 	}
 
-	if f.PHash() == nil && other.PHash() == nil {
-		if dis, err := f.imageHash.Distance(other.imageHash); err == nil {
-			if dis != 0 {
-				logger.Debug("different image", zap.String("file1", f.absPath), zap.String("file2", f.absPath), zap.Int("distance", dis))
-			}
-			return dis == 0
-		}
-	}
 	f.SumSHA256()
 	other.SumSHA256()
 	if len(f.sha256) != len(other.sha256) {
-		return false
+		return f.SameImage(other)
 	}
 
 	for i := 0; i < len(f.sha256); i++ {
 		if f.sha256[i] != other.sha256[i] {
-			return false
+			return f.SameImage(other)
 		}
 	}
 	return true
+}
+
+func (f *fileHash) SameImage(other *fileHash) bool {
+	if f.PHash() == nil && other.PHash() == nil {
+		if dis, err := f.imageHash.Distance(other.imageHash); err == nil {
+			//if dis != 0 {
+			//	logger.Info("different image", zap.String("file1", f.absPath), zap.String("file2", other.absPath), zap.Int("distance", dis))
+			//}
+			return dis == 0
+		}
+	}
+	return false
 }
